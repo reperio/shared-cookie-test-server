@@ -1,10 +1,16 @@
 import Joi from '@hapi/joi';
 import {ServerRoute} from '@hapi/hapi';
+import Jwt from 'jsonwebtoken';
+
+import {config} from '../config';
 
 export const routes: ServerRoute[] = [
     {
         method: 'GET',
         path: '/auth',
+        options: {
+            auth: 'jwt'
+        },
         handler: async (request, h) => {
             return {
                 username: 'person'
@@ -13,40 +19,52 @@ export const routes: ServerRoute[] = [
     },
     {
         method: 'POST',
-        path: '/auth',
+        path: '/auth-cookie',
         options: {
-            auth: false,
-            validate: {
-                payload: {
-                    username: Joi.string().required(),
-                    password: Joi.string().required()
-                }
-            }
+            auth: false
         },
         handler: async (request, h) => {
-            const payload = request.payload as {username: string, password: string};
-
-            if (payload.username === 'user' && payload.password === 'password') {
-                const cookie = {
-                    username: 'user',
-                    loginDate: (new Date()).toISOString()
-                };
-                const base64cookie = new Buffer(JSON.stringify(cookie)).toString('base64');
-                return h.response('')
-                    .code(204)
-                    // .state('auth', cookie)
-                    .state('auth', base64cookie);
-            } else {
-                return h.response('')
-                    .code(401);
-            }
+            const tokenPayload = {
+                username: 'user',
+                loginDate: (new Date()).toISOString()
+            };
+            const token = Jwt.sign(tokenPayload, config.jwtSecret, {
+                expiresIn: config.tokenExpiration
+            });
+            return h.response('')
+                .code(204)
+                .state('token', token);
+        }
+    },
+    {
+        method: 'POST',
+        path: '/auth-header',
+        options: {
+            auth: false
+        },
+        handler: async (request, h) => {
+            const tokenPayload = {
+                username: 'user',
+                loginDate: (new Date()).toISOString()
+            };
+            const token = Jwt.sign(tokenPayload, config.jwtSecret, {
+                expiresIn: config.tokenExpiration
+            });
+            return h.response('')
+                .code(204)
+                .header('Authorization', `Bearer ${token}`);
         }
     },
     {
         method: 'DELETE',
         path: '/auth',
+        options: {
+            auth: 'jwt'
+        },
         handler: async (request, h) => {
-            return h.response('').code(204);
+            return h.response('')
+                .code(204)
+                .unstate('token');
         }
     }
 ];

@@ -10,21 +10,27 @@ export async function createServer() {
         host: config.host
     });
 
-    server.route(routes);
+    await server.register(require('hapi-auth-jwt2'));
 
-    server.state('auth', {
-        ttl: 1000 * 60 * 60 * 24,
+    server.auth.strategy('jwt', 'jwt', {
+        key: config.jwtSecret,
+        validate: (decodedToken: any) => {
+            return { isValid: true };
+        },
+        verifyOptions: { algorithms: [ 'HS256' ] }
+    });
+
+    server.state('token', {
+        ttl: config.tokenExpiration,
         isSecure: false, // https only; set to true for production deployment
         isHttpOnly: true,
         isSameSite: 'Lax',
         path: null,
         domain: null,
-        encoding: 'none',
-        // encoding: 'base64json',
-        // sign: {
-        //     password: 'NQ97k97UBakjMrFjMp53dD5UWM5SJHKd'
-        // }
+        encoding: 'none'
     });
+
+    server.route(routes);
 
     return server;
 }
