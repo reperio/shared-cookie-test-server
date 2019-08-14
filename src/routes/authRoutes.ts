@@ -33,7 +33,8 @@ export const routes: ServerRoute[] = [
             });
             return h.response('')
                 .code(204)
-                .state('token', token);
+                .state('token', token)
+                .header('Access-Control-Allow-Credentials', 'true');
         }
     },
     {
